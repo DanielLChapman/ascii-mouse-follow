@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&display=swap" rel="stylesheet">
+
+    <title>ASCII Art Animation</title>
+    <script src="pako.js"></script>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div id="root">
+      <div class="App">
+        <div class="cover-header">
+          <div class="video-display" id="ascii-container">
+            <video
+              id="jscii-element-video"
+              width="150"
+              height="112"
+              controls
+              style="display: none"
+              loop
+              muted
+              src=""
+            >
+              Your browser does not support video
+            </video>
+            <pre id="ascii-container-video"></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <style>
+      .video-display {
+        display: flex;
+        justify-content: center; /* Center horizontally */
+        align-items: center; /* Center vertically */
+        height: 100vh; /* Set a specific height for the container */
+      }
+    </style>
+
+    <script src="./jscii.js"></script>
+
+    <script>
+      let videos = new Map();
+      for (let i = 0; i <= 350; i += 10) {
+        videos.set(i, `./trimmedwebmthreesixty/angle_${i}.webm`);
+      }
+      let loadedVideos = new Set();
+
+      var isPlaying = false;
+
+      // Function to preload a video
+      function preloadVideo(angle) {
+        if (videos.has(angle) && !loadedVideos.has(angle)) {
+          const videoSrc = videos.get(angle);
+          const video = document.createElement("video");
+
+          video.src = videoSrc;
+          video.preload = "auto"; // Adjust as needed
+
+          // Optionally, keep the video element off-DOM or attach it hidden to prevent auto-play
+          video.style.display = "none";
+          //document.body.appendChild(video);
+
+          // Store the video element for future reference or removal
+          //videos.set(angle, video);
+          loadedVideos.add(angle);
+        }
+      }
+
+      // Preload the immediate next videos based on the current angle
+      function preloadAdjacentVideos(currentAngle) {
+        const anglesToPreload = [currentAngle - 10, currentAngle + 10].filter(
+          (angle) => angle >= 0 && angle <= 350
+        );
+        anglesToPreload.forEach(preloadVideo);
+      }
+
+      function loadVideo(video) {
+        let source = document.getElementById("jscii-element-video");
+        source.setAttribute("src", video);
+        source.setAttribute("type", "video/mp4");
+      }
+
+      let currentAngle = -1;
+      // Example usage
+      videoJscii = new window.Jscii({
+        container: document.getElementById("ascii-container-video"),
+        el: document.getElementById("jscii-element-video"),
+      });
+      document
+        .getElementById("jscii-element-video")
+        .addEventListener("loadeddata", function () {
+          document.getElementById("jscii-element-video").play();
+        });
+
+      preloadAdjacentVideos(0); // Preload videos for angles 0, 10, and 350 if starting at angle 0
+
+      loadVideo(videos.get(0));
+
+      window.addEventListener("resize", adjustAsciiDisplay);
+
+      function adjustAsciiDisplay() {
+        const asciiContainer = document.getElementById("ascii-container-video");
+        const viewportWidth = window.innerWidth;
+        const scaleFactor = Math.max(0.5, Math.min(1, viewportWidth / 1920)); // Adjust 1920 to your base width
+
+        asciiContainer.style.fontSize = `${2 * scaleFactor}px`; // Adjust 8 to your base font size
+        asciiContainer.style.letterSpacing = `${0.5 * scaleFactor}px`; // Adjust 3 to your base letter spacing
+      }
+
+      //mouse move
+      let lastExecution = 0; // Store the timestamp of the last execution
+
+      const handleMouseMove = (e) => {
+        const now = Date.now(); // Get the current timestamp
+
+        // Check if more than 50 milliseconds have passed since the last execution
+        if (now - lastExecution > 50) {
+          let midPointX = Math.floor(window.innerWidth / 2);
+          let midPointY = Math.floor(window.innerHeight / 2);
+
+          let gridX = e.screenX - midPointX;
+          let gridY = midPointY - e.screenY; // Invert Y to make positive Y up
+
+          console.log(midPointX, midPointY, gridX, gridY, e.offsetX, e.offsetY)
+
+          let angleRadians = Math.atan2(gridY, gridX);
+          let angleDegrees = angleRadians * (180 / Math.PI);
+
+          // Normalize the angle to 0-360 range
+          if (angleDegrees < 0) {
+            angleDegrees += 360;
+          }
+          let adjustedAngle = Math.floor(angleDegrees / 10) * 10;
+
+          console.log(adjustedAngle)
+        
+          //console.log(currentAngle, adjustedAngle)
+          if (currentAngle !== adjustedAngle) {
+            currentAngle = adjustedAngle;
+            loadVideo(videos.get(adjustedAngle));
+            preloadAdjacentVideos(adjustedAngle);
+            
+          }
+
+          lastExecution = now; // Update the timestamp of the last execution
+        }
+      };
+
+      document.addEventListener("DOMContentLoaded", () => {
+        window.addEventListener("mousemove", handleMouseMove);
+      });
+    </script>
+  </body>
+</html>
